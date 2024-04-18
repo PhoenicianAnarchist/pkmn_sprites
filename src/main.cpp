@@ -8,6 +8,7 @@
 
 #include <cstdint> // std::uint8_t
 
+#include "gbimg/palette.hpp"
 #include "gbimg/sprite.hpp"
 #include "util/io.hpp"
 #include "util/options.hpp"
@@ -24,10 +25,14 @@ int main(int argc, char *argv[]) {
   std::vector<std::uint8_t> raw_data = loadFromFile(options.image_path);
   Sprite sprite(raw_data);
 
-  sprite.save("out.pgm");
-  // sprite.save_tiles("debug");
+  sprite.save(
+    options.output_path, "grey", IMAGE_FORMAT::PGM, options.create_dirs
+  );
 
-  // todo: change to output full colour .ppm (with palette options!)
+  sprite.set_palette(palettes::gbc::red);
+  sprite.save(
+    options.output_path, "pkmn_red", IMAGE_FORMAT::PPM, options.create_dirs
+  );
 
   return 0;
 }

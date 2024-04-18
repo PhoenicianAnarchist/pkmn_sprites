@@ -13,25 +13,72 @@ Sprite::Sprite(const std::vector<std::uint8_t> &raw_data) : data(raw_data) {
     default: width = 0; height = 0;
   }
 
+  colour_palette = {
+    {0xff, 0xff, 0xff},
+    {0xaa, 0xaa, 0xaa},
+    {0x55, 0x55, 0x55},
+    {0x00, 0x00, 0x00}
+  };
+
   auto interlaced = interlace(data);
   auto expanded = expand(interlaced);
   tiles = stream_to_tiles(expanded);
   data = tiles_to_stream(tiles, width / 8, height / 8);
 }
 
-void Sprite::save(const std::filesystem::path &filepath) const {
-  save_pgm(data, width, height, filepath);
+void Sprite::save(
+  const std::filesystem::path &directory, const std::string &name,
+  IMAGE_FORMAT format, bool create_dirs
+) const {
+  std::stringstream ss;
+  std::vector<std::uint8_t> output_data;
+  std::filesystem::path filepath;
+
+  switch (format) {
+    case IMAGE_FORMAT::PGM:
+      for (unsigned char b : data) {
+        output_data.push_back(0b00000011 - b);
+      }
+
+      ss << name << ".pgm";
+      filepath = directory / ss.str();
+      save_pgm(output_data, width, height, filepath, create_dirs);
+
+      break;
+
+    case IMAGE_FORMAT::PPM:
+      for (auto b : data) {
+        auto c = colour_palette[b];
+        for (std::size_t i = 0; i < 3; ++i) {
+          output_data.push_back(c[i]);
+        }
+      }
+
+      ss << name << ".ppm";
+      filepath = directory / ss.str();
+      save_ppm(output_data, width, height, filepath, create_dirs);
+
+      break;
+  }
 }
 
-void Sprite::save_tiles(const std::filesystem::path &directory) const {
+void Sprite::save_tiles(
+  const std::filesystem::path &directory, bool create_dirs
+) const {
   // for debugging
   for (std::size_t t = 0; t < tiles.size(); ++t) {
     std::stringstream ss;
     ss << "tile" << std::setw(3) << std::setfill('0') << t << ".pgm";
 
     auto filepath = directory / ss.str();
-    save_pgm(tiles[t], 8, 8, filepath);
+    save_pgm(tiles[t], 8, 8, filepath, create_dirs);
   }
+}
+
+void Sprite::set_palette(
+  const std::vector<std::array<std::uint8_t, 3>> &palette
+) {
+  colour_palette = palette;
 }
 
 std::vector<std::uint8_t> Sprite::interlace(
@@ -46,10 +93,10 @@ std::vector<std::uint8_t> Sprite::interlace(
     std::uint16_t s;
     for (int i = 0; i <= 7; ++i) {
       s <<= 1;
-      s |= (a & (0b10000000 >> i)) >> (7 - i);
+      s |= (b & (0b10000000 >> i)) >> (7 - i);
 
       s <<= 1;
-      s |= (b & (0b10000000 >> i)) >> (7 - i);
+      s |= (a & (0b10000000 >> i)) >> (7 - i);
     }
 
     std::uint8_t c = (s & 0xff00) >> 8;
@@ -70,13 +117,6 @@ std::vector<std::uint8_t> Sprite::expand(
   for (auto b : data) {
     for (std::size_t i = 0; i < 4; ++i) {
       std::uint8_t a = (b >> ((3 - i) * 2)) & 0b00000011;
-
-      // swap 0b00 and 0b11
-      if (a == 0b00000000) {
-        a = 0b00000011;
-      } else if (a == 0b00000011) {
-        a = 0b00000000;
-      }
 
       expanded_data.push_back(a);
     }

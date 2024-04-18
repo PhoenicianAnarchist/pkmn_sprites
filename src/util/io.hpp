@@ -8,7 +8,8 @@
 
 std::vector<std::uint8_t> loadFromFile(const std::filesystem::path &path);
 int writeToFile(
-  const std::filesystem::path &path, const std::vector<std::uint8_t> &data
+  const std::filesystem::path &path, const std::vector<std::uint8_t> &data,
+  bool create_dirs=false
 );
 
 #endif // __IO_HPP__
