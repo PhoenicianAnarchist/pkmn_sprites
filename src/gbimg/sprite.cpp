@@ -1,3 +1,4 @@
+#include <iostream>
 #include <iomanip>
 
 #include "../util/image.hpp"
@@ -7,9 +8,9 @@ Sprite::Sprite(const std::vector<std::uint8_t> &raw_data) : data(raw_data) {
   std::size_t len = data.size();
 
   switch (len) {
-    case 400: width = 40; height = 40; break;
-    case 576: width = 48; height = 48; break;
-    case 784: width = 56; height = 56; break;
+    case 400: width = 5; height = 5; break;
+    case 576: width = 6; height = 6; break;
+    case 784: width = 7; height = 7; break;
     default: width = 0; height = 0;
   }
 
@@ -23,7 +24,7 @@ Sprite::Sprite(const std::vector<std::uint8_t> &raw_data) : data(raw_data) {
   auto interlaced = interlace(data);
   auto expanded = expand(interlaced);
   tiles = stream_to_tiles(expanded);
-  data = tiles_to_stream(tiles, width / 8, height / 8);
+  data = tiles_to_stream(tiles, width, height);
 }
 
 void Sprite::save(
@@ -42,7 +43,7 @@ void Sprite::save(
 
       ss << name << ".pgm";
       filepath = directory / ss.str();
-      save_pgm(output_data, width, height, filepath, create_dirs);
+      save_pgm(output_data, width * 8, height * 8, filepath, create_dirs);
 
       break;
 
@@ -56,7 +57,7 @@ void Sprite::save(
 
       ss << name << ".ppm";
       filepath = directory / ss.str();
-      save_ppm(output_data, width, height, filepath, create_dirs);
+      save_ppm(output_data, width * 8, height * 8, filepath, create_dirs);
 
       break;
   }
