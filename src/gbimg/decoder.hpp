@@ -35,6 +35,16 @@ public:
     std::vector<std::uint8_t> &encoded_data, std::uint8_t width,
     std::uint8_t height
   );
+  static std::vector<std::uint8_t> xor_planes(
+    const std::vector<std::uint8_t> &plane_0,
+    const std::vector<std::uint8_t> &plane_1,
+    std::uint8_t width, std::uint8_t height
+  );
+  static std::vector<std::uint8_t> zip_planes(
+    const std::vector<std::uint8_t> &plane_0,
+    const std::vector<std::uint8_t> &plane_1,
+    std::uint8_t width, std::uint8_t height
+  );
 
   // byte pairs are in column order (two columns wide)
   static std::vector<std::uint8_t>transpose_pairs(

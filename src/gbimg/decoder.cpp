@@ -33,7 +33,6 @@ Decoder::Decoder(
   // width * height (num tiles) * 64 1bpp pixels / 8 bits per byte
   std::size_t buffer_size = width * height * 8;
 
-  // std::cout << "rle decoding plane 0" << std::endl;
   plane_0 = rle_decode(reader, width, height);
 
   encoding_mode = reader.get();
@@ -43,6 +42,10 @@ Decoder::Decoder(
   }
 
   plane_1 = rle_decode(reader, width, height);
+
+  if (swap_buffers) {
+    std::swap(plane_0, plane_1);
+  }
 
   if (debug) {
     std::cout << "  Mode   " << int(encoding_mode) << std::endl;
@@ -73,21 +76,17 @@ Decoder::Decoder(
     }
   }
 
+  if (encoding_mode != 1) {
+    plane_0 = xor_planes(plane_0, plane_1, width, height);
 
+    if (debug) {
+      render_bitplane(
+        plane_0, width, height, output_path, "plane_0_xor", create_dirs
+      );
+    }
+  }
 
-  // if (swap_buffers) {
-  //   std::swap(plane_0, plane_1);
-  // }
-
-  // if (encoding_mode != 1) {
-  //   plane_1 = xor(plane_0, plane_1);
-  //
-  //   if (debug) {
-  //     render_bitplane(
-  //       plane_1, width, height, output_path, "plane_1_delta", create_dirs
-  //     );
-  //   }
-  // }
+  data = zip_planes(plane_0, plane_1, width, height);
 }
 
 std::vector<std::uint8_t> Decoder::rle_decode(
@@ -209,6 +208,35 @@ std::vector<std::uint8_t> Decoder::delta_decode(
       writer.put(n);
       previous_bit = n;
     }
+  }
+
+  return data;
+}
+
+std::vector<std::uint8_t> Decoder::xor_planes(
+  const std::vector<std::uint8_t> &plane_0,
+  const std::vector<std::uint8_t> &plane_1,
+  std::uint8_t width, std::uint8_t height
+) {
+  std::vector<std::uint8_t> data;
+
+  for (std::size_t i = 0; i < plane_0.size(); ++i) {
+    data.push_back(plane_0[i] ^ plane_1[i]);
+  }
+
+  return data;
+}
+
+std::vector<std::uint8_t> Decoder::zip_planes(
+  const std::vector<std::uint8_t> &plane_0,
+  const std::vector<std::uint8_t> &plane_1,
+  std::uint8_t width, std::uint8_t height
+) {
+  std::vector<std::uint8_t> data;
+
+  for (std::size_t i = 0; i < plane_0.size(); ++i) {
+    data.push_back(plane_0[i]);
+    data.push_back(plane_1[i]);
   }
 
   return data;
