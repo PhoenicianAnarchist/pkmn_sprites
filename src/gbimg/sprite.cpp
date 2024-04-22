@@ -1,15 +1,45 @@
+#include <iostream>
 #include <iomanip>
+#include <sstream>
 
 #include "../util/image.hpp"
 #include "sprite.hpp"
+
+void render_bitplane(
+  const std::vector<std::uint8_t> &data, std::size_t width, std::size_t height,
+  const std::filesystem::path &output_path, const std::string &name,
+  bool create_dirs
+) {
+  // bitplane data is already in the correct orientation
+  std::vector<std::uint8_t> sprite_data;
+
+  for (auto b : data) {
+    sprite_data.push_back(b);
+    sprite_data.push_back(b);
+  }
+
+  auto interlaced = Sprite::interlace(sprite_data);
+  auto expanded = Sprite::expand(interlaced);
+  sprite_data = expanded;
+
+  std::vector<std::uint8_t> output_data;
+  for (unsigned char b : sprite_data) {
+    output_data.push_back(0b00000011 - b);
+  }
+
+  std::stringstream ss;
+  ss << name << ".pgm";
+  std::filesystem::path filepath = output_path / ss.str();
+  save_pgm(output_data, width * 8, height * 8, filepath, create_dirs);
+}
 
 Sprite::Sprite(const std::vector<std::uint8_t> &raw_data) : data(raw_data) {
   std::size_t len = data.size();
 
   switch (len) {
-    case 400: width = 40; height = 40; break;
-    case 576: width = 48; height = 48; break;
-    case 784: width = 56; height = 56; break;
+    case 400: width = 5; height = 5; break;
+    case 576: width = 6; height = 6; break;
+    case 784: width = 7; height = 7; break;
     default: width = 0; height = 0;
   }
 
@@ -23,7 +53,7 @@ Sprite::Sprite(const std::vector<std::uint8_t> &raw_data) : data(raw_data) {
   auto interlaced = interlace(data);
   auto expanded = expand(interlaced);
   tiles = stream_to_tiles(expanded);
-  data = tiles_to_stream(tiles, width / 8, height / 8);
+  data = tiles_to_stream(tiles, width, height);
 }
 
 void Sprite::save(
@@ -42,7 +72,7 @@ void Sprite::save(
 
       ss << name << ".pgm";
       filepath = directory / ss.str();
-      save_pgm(output_data, width, height, filepath, create_dirs);
+      save_pgm(output_data, width * 8, height * 8, filepath, create_dirs);
 
       break;
 
@@ -56,7 +86,7 @@ void Sprite::save(
 
       ss << name << ".ppm";
       filepath = directory / ss.str();
-      save_ppm(output_data, width, height, filepath, create_dirs);
+      save_ppm(output_data, width * 8, height * 8, filepath, create_dirs);
 
       break;
   }
