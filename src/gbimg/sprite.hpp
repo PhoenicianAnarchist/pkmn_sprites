@@ -3,6 +3,7 @@
 
 #include <array>
 #include <filesystem>
+#include <string>
 #include <vector>
 
 #include <cstdint> // std::uint8_t
@@ -11,6 +12,12 @@ enum class IMAGE_FORMAT {
   PGM,
   PPM
 };
+
+void render_bitplane(
+  const std::vector<std::uint8_t> &data, std::size_t width, std::size_t height,
+  const std::filesystem::path &output_path, const std::string &name,
+  bool create_dirs
+);
 
 class Sprite {
 public:
