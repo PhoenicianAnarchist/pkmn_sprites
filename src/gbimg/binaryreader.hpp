@@ -1,11 +1,8 @@
 #ifndef __BINARYREADER_HPP__
 #define __BINARYREADER_HPP__
 
-#include <ostream>
 #include <vector>
 #include <cstdint> // std::size_t
-
-std::ostream &operator<<(std::ostream &os, std::uint8_t b);
 
 class BinaryReader {
 public:

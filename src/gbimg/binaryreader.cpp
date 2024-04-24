@@ -1,12 +1,6 @@
-#include <iostream>
 #include <bitset>
 
 #include "binaryreader.hpp"
-
-std::ostream &operator<<(std::ostream &os, std::uint8_t b) {
-  os << "0b" << std::bitset<8>(b);
-  return os;
-}
 
 BinaryReader::BinaryReader(std::vector<std::uint8_t> &buffer)
 : buffer(buffer), pointer(0) {
