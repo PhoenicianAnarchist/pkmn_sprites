@@ -9,13 +9,20 @@ OPTIONS parse_command_line(int argc, char *argv[]) {
   options.err = 0;
   options.called_for_help = false;
   options.output_path = "output";
+  options.index = 0;
+  options.dexno = 0;
   options.create_dirs = false;
 
   app.option_defaults()->always_capture_default();
 
-  app.add_option("-p,--path", options.image_path, "path to image")->required();
+  app.add_option("-r,--rom", options.rom_path, "path to rom")->required();
   app.add_option("-o,--out", options.output_path, "path to save output");
   app.add_flag("-c,--create_dirs", options.create_dirs, "create directories if needed");
+
+  auto index = app.add_option_group("subgroup");
+  index->add_option("-i,--index", options.index, "pokemon internal index");
+  index->add_option("-d,--dexno", options.dexno, "pokemon pokedex number");
+  index->require_option(1);
 
   try {
     app.parse(argc, argv);
