@@ -307,6 +307,7 @@ std::ostream &pkmnred::operator<<(std::ostream &os, const PokemonStats &stats) {
   os << "  Width : " << int(stats.sprite_size & 0x0f) << '\n';
 
   os << "Sprite data location\n";
+  os << "  BANK  " << gbhelp::hex_str(sprite_banks[stats.id], 1) << '\n';
   os << "  Front " << gbhelp::hex_str(stats.front_sprite_offset, 2) << '\n';
   os << "  Back  " << gbhelp::hex_str(stats.back_sprite_offset, 2) << '\n';
 

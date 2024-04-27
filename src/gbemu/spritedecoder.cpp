@@ -1,3 +1,4 @@
+#include <iostream>
 #include <bitset>
 
 #include "spritedecoder.hpp"
@@ -32,18 +33,20 @@ void gbemu::Decoder::read_encoding_mode() {
   }
 }
 
-void gbemu::Decoder::rle_decode(bool is_first_plane) {
+void gbemu::Decoder::rle_decode(std::size_t plane_index) {
   std::size_t pairs_to_read = width * height * 8 * 4;
 
   // each column is only 2 pixels wide
   std::size_t current_column = 0;
   std::size_t current_row = 0;
   std::size_t offset = 0;
-  std::size_t buffer_offset = 392;
+  std::size_t buffer_offset = plane_index * 392;
 
-  if (is_first_plane ^ swap_buffers) {
-    buffer_offset = 784;
+  if (swap_buffers) {
+    buffer_offset = 1176 - buffer_offset;
   }
+
+  // std::cout << "Buffer offset for plane " << plane_index << " == " << buffer_offset << std::endl;
 
   std::size_t num_rows = (height * 8);
 
@@ -58,8 +61,10 @@ void gbemu::Decoder::rle_decode(bool is_first_plane) {
       }
     } catch (std::ios_base::failure &e) { break; }
 
+    // std::cout << "writing pairs" << std::endl;
     for (std::bitset<2> p : pairs) {
       std::size_t byte_index = buffer_offset + offset + current_row;
+      // std::cout << "writing to " << byte_index << std::endl;
 
       std::uint8_t new_byte = (p.to_ulong() & 0xff);
       new_byte <<= (3 - (current_column % 4)) * 2;
@@ -72,7 +77,9 @@ void gbemu::Decoder::rle_decode(bool is_first_plane) {
       }
     }
 
+    // std::cout << "finished writing pairs" << std::endl;
     pairs_to_read -= pairs.size();
+    // std::cout << "pairs left " << pairs_to_read << std::endl;
 
     if (pairs_to_read <= 0) {
       break;
@@ -128,4 +135,79 @@ std::vector<std::bitset<2>> gbemu::Decoder::decode_data_packet() {
   };
 
   return pairs;
+}
+
+void gbemu::Decoder::delta_decode(std::size_t plane_index) {
+  std::size_t buffer_offset = plane_index * 392;
+
+  std::size_t num_cols = width;
+  std::size_t num_rows = height * 8;
+
+  for (std::size_t row = 0; row < num_rows; ++row) {
+    bool do_one = 0;
+    for (std::size_t col = 0; col < num_cols; ++col) {
+      std::size_t index = row + (col * num_rows);
+
+      std::uint8_t b = cart.ram[buffer_offset + index];
+      std::uint8_t new_byte = 0;
+
+      for (int i = 8; i > 0; --i) {
+        bool is_one = (b >> (i - 1)) & 0b1;
+
+        if (is_one) {
+          do_one = !do_one;
+        }
+
+        new_byte <<= 1;
+        if (do_one) {
+          new_byte |= 0b1;
+        }
+      }
+
+      cart.ram[buffer_offset + index] = new_byte;
+    }
+  }
+}
+
+void gbemu::Decoder::xor_planes() {
+  std::size_t buffer_1_offset = 392;
+  std::size_t buffer_2_offset = 784;
+
+  std::size_t buffer_size = width * height * 8;
+  for (std::size_t i = 0; i < buffer_size; ++i) {
+    cart.ram[buffer_1_offset + i] ^= cart.ram[buffer_2_offset + i];
+  }
+}
+
+void gbemu::Decoder::clear(std::size_t plane_index) {
+  std::size_t offset = plane_index * 392;
+
+  for (std::size_t i = 0; i < 392; ++i) {
+    cart.ram[offset + i] = 0;
+  }
+}
+
+void gbemu::Decoder::copy(std::size_t src_plane, std::size_t dst_plane) {
+  std::size_t src_offset = src_plane * 392;
+  std::size_t dst_offset = dst_plane * 392;
+
+  for (std::size_t i = 0; i < 392; ++i) {
+    cart.ram[dst_offset + i] = cart.ram[src_offset + i];
+  }
+}
+//
+void gbemu::Decoder::zip_planes() {
+  std::size_t index = 1176;
+  std::size_t buffer_0_offset = 0;
+  std::size_t buffer_1_offset = 392;
+
+  std::size_t buffer_size = 392;
+  for (std::size_t i = 0; i < buffer_size; ++i) {
+    std::size_t buffer_0_index = (buffer_0_offset + (buffer_size - 1)) - i;
+    std::size_t buffer_1_index = (buffer_1_offset + (buffer_size - 1)) - i;
+    --index;
+    cart.ram[index] = cart.ram[buffer_1_index];
+    --index;
+    cart.ram[index] = cart.ram[buffer_0_index];
+  }
 }

@@ -27,7 +27,7 @@ namespace gbhelp {
 
   void dump_ram(
     Cartridge &cart, const std::filesystem::path &output_directory,
-    bool create_dirs
+    const std::string &name, bool create_dirs=false
   );
 }
 

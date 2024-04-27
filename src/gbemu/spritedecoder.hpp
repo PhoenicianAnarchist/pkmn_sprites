@@ -17,11 +17,14 @@ namespace gbemu {
 
     void read_header();
     void read_encoding_mode();
-    void rle_decode(bool is_first_plane=false);
-    // void delta_decode();
-    // void xor_planes();
+    void rle_decode(std::size_t plane_index);
+    void delta_decode(std::size_t plane_index);
+    void xor_planes();
+    void clear(std::size_t plane_index);
+    void copy(std::size_t src_plane, std::size_t dst_plane);
+    void zip_planes();
 
-  private:
+  // private:
     std::vector<std::bitset<2>> decode_rle_packet();
     std::vector<std::bitset<2>> decode_data_packet();
 

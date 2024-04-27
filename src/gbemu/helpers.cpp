@@ -54,7 +54,7 @@ std::string gbhelp::decode_string(
 
 void gbhelp::dump_ram(
   Cartridge &cart, const std::filesystem::path &output_directory,
-  bool create_dirs
+  const std::string &name, bool create_dirs
 ) {
   // dump scprite scratch ram to a texture, in column order
   std::array<std::uint8_t, 0x4000> &ram = cart.ram;
@@ -81,6 +81,8 @@ void gbhelp::dump_ram(
     }
   }
 
-  std::filesystem::path filepath = output_directory / "ram.pgm";
+  std::stringstream ss;
+  ss << name << ".pgm";
+  std::filesystem::path filepath = output_directory / ss.str();
   save_pgm(image_data, 168, 56, filepath, true, "1");
 }
