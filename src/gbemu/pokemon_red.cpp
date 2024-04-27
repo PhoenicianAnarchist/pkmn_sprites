@@ -245,20 +245,6 @@ std::map<std::uint8_t, std::string> pkmnred::get_charmap() {
   return charmap;
 }
 
-std::uint8_t pkmnred::get_sprite_bank(std::uint8_t index) {
-  if (index < 33) {
-    return 9;
-  }
-  if (index < 74) {
-    return 10;
-  }
-  if (index < 116) {
-    return 12;
-  }
-
-  return 13;
-}
-
 std::ostream &pkmnred::operator<<(std::ostream &os, const PokemonStats &stats) {
   os << "Information for " << stats.name << ", ";
   os << " ID (" << int(stats.id) << ")";

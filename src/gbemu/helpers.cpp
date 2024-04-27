@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "helpers.hpp"
+#include "../util/image.hpp"
 
 std::string gbhelp::hex_str(
   std::uint64_t addr, std::size_t byte_count, bool show_base
@@ -49,4 +50,37 @@ std::string gbhelp::decode_string(
   }
 
   return ss.str();
+}
+
+void gbhelp::dump_ram(
+  Cartridge &cart, const std::filesystem::path &output_directory,
+  bool create_dirs
+) {
+  // dump scprite scratch ram to a texture, in column order
+  std::array<std::uint8_t, 0x4000> &ram = cart.ram;
+
+  // onle need a new buffer for 3 * 392 bytes
+  std::array<std::uint8_t, 0x0498> transposed;
+
+  for (std::size_t col = 0; col < 21; ++col) {
+    std::size_t offset = col * 56;
+    for (std::size_t row = 0; row < 56; ++row) {
+      std::size_t index = row + offset;
+      std::size_t transposed_index = col + (row * 21);
+
+      transposed[transposed_index] = ram[index];
+    }
+  }
+
+  std::vector<std::uint8_t> image_data;
+  for (auto b : transposed) {
+    for (int i = 8; i > 0; --i) {
+      std::uint8_t new_byte;
+      new_byte = (b >> (i - 1)) & 0b1;
+      image_data.push_back(new_byte);
+    }
+  }
+
+  std::filesystem::path filepath = output_directory / "ram.pgm";
+  save_pgm(image_data, 168, 56, filepath, true, "1");
 }

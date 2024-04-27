@@ -45,7 +45,7 @@ int writeToFile(
 
   if (create_dirs) {
     auto dir = path.parent_path();
-    if (!std::filesystem::exists(dir)) {
+    if ((dir != "") && (!std::filesystem::exists(dir))) {
       std::filesystem::create_directories(dir);
     }
   }

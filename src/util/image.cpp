@@ -4,7 +4,8 @@
 
 int save_pgm(
   const std::vector<std::uint8_t> &data, std::size_t width, std::size_t height,
-  const std::filesystem::path &filepath, bool create_dirs
+  const std::filesystem::path &filepath, bool create_dirs,
+  const std::string &max_value
 ) {
   std::vector<std::uint8_t> image_data;
 
@@ -20,7 +21,8 @@ int save_pgm(
   std::copy(h_str.begin(), h_str.end(), std::back_inserter(header));
 
   header.push_back('\n');
-  header.push_back('3'); // max colours. 3 = 2bpp
+  std::copy(max_value.begin(), max_value.end(), std::back_inserter(header));
+  // header.push_back('3'); // max colours. 3 = 2bpp
   header.push_back('\n');
 
   std::copy(header.begin(), header.end(), std::back_inserter(image_data));
@@ -32,7 +34,8 @@ int save_pgm(
 
 int save_ppm(
   const std::vector<std::uint8_t> &data, std::size_t width, std::size_t height,
-  const std::filesystem::path &filepath, bool create_dirs
+  const std::filesystem::path &filepath, bool create_dirs,
+  const std::string &max_value
 ) {
   std::vector<std::uint8_t> image_data;
 
@@ -48,9 +51,7 @@ int save_ppm(
   std::copy(h_str.begin(), h_str.end(), std::back_inserter(header));
 
   header.push_back('\n');
-  header.push_back('2');
-  header.push_back('5');
-  header.push_back('5'); // max colour value
+  std::copy(max_value.begin(), max_value.end(), std::back_inserter(header));
   header.push_back('\n');
 
   std::copy(header.begin(), header.end(), std::back_inserter(image_data));

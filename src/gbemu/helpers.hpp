@@ -1,11 +1,14 @@
 #ifndef __GBEMU_HELPERS__
 #define __GBEMU_HELPERS__
 
+#include <filesystem>
 #include <map>
 #include <string>
 #include <vector>
 
 #include <cstdint>
+
+#include "cartridge.hpp"
 
 namespace gbhelp {
   std::string hex_str(
@@ -20,6 +23,11 @@ namespace gbhelp {
     const std::vector<std::uint8_t> &raw_data,
     const std::map<std::uint8_t, std::string> &charactermap,
     std::uint8_t eos_char
+  );
+
+  void dump_ram(
+    Cartridge &cart, const std::filesystem::path &output_directory,
+    bool create_dirs
   );
 }
 

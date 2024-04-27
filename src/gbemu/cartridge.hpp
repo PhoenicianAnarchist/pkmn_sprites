@@ -1,5 +1,5 @@
-#ifndef __CARTRIDGE_HPP__
-#define __CARTRIDGE_HPP__
+#ifndef __GBEMU_CARTRIDGE_HPP__
+#define __GBEMU_CARTRIDGE_HPP__
 
 #include <filesystem>
 #include <array>
@@ -16,10 +16,6 @@ public:
 
   std::uint8_t read(std::uint16_t address);
   void write(std::uint16_t address, std::uint8_t data);
-
-  std::array<std::uint8_t, 0x2000> dump_ram() const;
-
-  /////
 
   // read (and swap) two bytes
   std::uint16_t read_address(std::uint16_t address);
@@ -43,12 +39,11 @@ public:
     std::uint16_t address, std::vector<std::uint8_t> data, std::uint16_t count
   );
 
-private:
-  std::vector<std::uint8_t> rom;
-
   std::array<std::uint8_t, 0x4000> bank0;
   std::array<std::uint8_t, 0x4000> bank1;
-  std::array<std::uint8_t, 0x2000> ram;
+  std::array<std::uint8_t, 0x4000> ram;
+private:
+  std::vector<std::uint8_t> rom;
 };
 
-#endif // __CARTRIDGE_HPP__
+#endif // __GBEMU_CARTRIDGE_HPP__

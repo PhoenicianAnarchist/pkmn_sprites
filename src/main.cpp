@@ -1,3 +1,4 @@
+#include <bitset>
 #include <iostream>
 #include <iomanip>
 #include <filesystem>
@@ -9,23 +10,11 @@
 #include "gbemu/cartridge.hpp"
 #include "gbemu/helpers.hpp"
 #include "gbemu/pokemon_red.hpp"
+#include "gbemu/spritedecoder.hpp"
 
-#include "gbimg/decoder.hpp"
-#include "gbimg/palette.hpp"
-#include "gbimg/sprite.hpp"
-#include "util/image.hpp"
-#include "util/io.hpp"
 #include "util/options.hpp"
 
-void decompress_raw(
-  const std::filesystem::path &path_to_data,
-  const std::filesystem::path &output_directory, bool create_dirs
-);
-
-void render_tile_data(
-  const std::filesystem::path &path_to_data,
-  const std::filesystem::path &output_directory, bool create_dirs
-);
+void test_ram(Cartridge &cart);
 
 // All pointers and verification info is stored in an external file for ease
 // of adding new rom info.
@@ -58,6 +47,7 @@ int main(int argc, char *argv[]) {
   if (options.dexno != 0) {
     options.index = rominfo::dex_to_index[(options.dexno - 1)];
   }
+
   std::uint8_t pokemon_id = options.index;
 
   rominfo::PokemonStats pokemon_stats;
@@ -69,46 +59,33 @@ int main(int argc, char *argv[]) {
   }
   std::cout << pokemon_stats << std::endl;
 
-  // decompress_raw(
-  //   options.image_path, options.output_path, options.create_dirs
-  // );
+  gbemu::Decoder decoder(cart);
+  decoder.set_bank(rominfo::sprite_banks[pokemon_stats.id]);
+  decoder.set_offset(pokemon_stats.front_sprite_offset);
+  decoder.read_header();
+  decoder.rle_decode(0);
+  decoder.read_encoding_mode();
+  decoder.rle_decode(1);
 
-  // render_tile_data(
-  //   options.image_path, options.output_path, options.create_dirs
-  // );
+  gbhelp::dump_ram(cart, "", false);
 
   return 0;
 }
 
-void decompress_raw(
-  const std::filesystem::path &path_to_data,
-  const std::filesystem::path &output_directory, bool create_dirs
-) {
-  // decompress and decode raw data
-  std::vector<std::uint8_t> raw_data = loadFromFile(path_to_data);
-  Decoder dec(raw_data, output_directory, create_dirs, true);
+void test_ram(Cartridge &cart) {
+  gbemu::BinaryInterface bi(cart.ram);
+  for (std::size_t col = 0; col < 168; ++col) {
+    std::size_t offset = col * 56;
+    for (std::size_t row = 0; row < 56; ++row) {
+      std::size_t index = row + offset;
 
-  // NOTE: data is not in the correct format
-  // TODO: rewrite renderer to use a more accurate memory layout
-
-  auto interlaced = Sprite::interlace(dec.data);
-  auto expanded = Sprite::expand(interlaced);
-  std::vector<std::uint8_t> output_data;
-  for (unsigned char b : expanded) {
-    output_data.push_back(0b00000011 - b);
+      // std::size_t new_index = col + (row * 168);
+      bi.seek(index  *8);
+      for (int i = 8; i >= 0; --i) {
+        bi.put((index >> (i - 1)) & 0b1);
+      }
+    }
   }
-  std::filesystem::path filepath = output_directory / "output.pgm";
-  save_pgm(output_data, dec.width * 8, dec.height * 8, filepath, true);
-}
 
-void render_tile_data(
-  const std::filesystem::path &path_to_data,
-  const std::filesystem::path &output_directory, bool create_dirs
-) {
-  // render sprite from decoded tile data
-  std::vector<std::uint8_t> data = loadFromFile(path_to_data);
-  Sprite sprite(data);
-  sprite.save(output_directory, "grey", IMAGE_FORMAT::PGM, create_dirs);
-  sprite.set_palette(palettes::gbc::red);
-  sprite.save(output_directory, "pkmn_red", IMAGE_FORMAT::PPM, create_dirs);
+  gbhelp::dump_ram(cart, "", false);
 }

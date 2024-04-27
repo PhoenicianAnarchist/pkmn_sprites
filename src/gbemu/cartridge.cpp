@@ -41,7 +41,7 @@ std::uint8_t Cartridge::read(std::uint16_t address) {
     return bank1[address - 0x4000];
   }
 
-  // cartrdge ram
+  // cartridge ram
   if ((address >= 0xa000) && (address < 0xc000)) {
     return ram[address - 0xa000];
   }
@@ -62,10 +62,6 @@ void Cartridge::write(std::uint16_t address, std::uint8_t data) {
   ss << "write out of range @ " << gbhelp::hex_str(address, 2);
 
   throw std::out_of_range(ss.str());
-}
-
-std::array<std::uint8_t, 0x2000> Cartridge::dump_ram() const {
-  return ram;
 }
 
 std::uint16_t Cartridge::read_address(std::uint16_t address) {
