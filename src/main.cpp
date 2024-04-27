@@ -113,6 +113,7 @@ int main(int argc, char *argv[]) {
   gbemu::Renderer renderer(sprite_data, decoder.width, decoder.height);
   renderer.interlace();
   renderer.expand();
+  renderer.add_padding();
   renderer.transpose();
 
   std::stringstream ss;

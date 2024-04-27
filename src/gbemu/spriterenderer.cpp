@@ -1,6 +1,6 @@
+#include <exception>
 #include <bitset>
 #include <algorithm>
-#include <iostream>
 #include "../util/image.hpp"
 
 #include "spriterenderer.hpp"
@@ -68,6 +68,55 @@ void gbemu::Renderer::expand() {
   data = expanded_data;
 }
 
+void gbemu::Renderer::add_padding() {
+  std::vector<std::uint8_t> padded_data;
+  std::uint8_t pad_left = int(((7 - width) / 2.0) + 0.5);
+  std::uint8_t pad_right  = int((7 - width) / 2.0);
+  std::uint8_t pad_top = 7 - height;
+
+  std::array<std::uint8_t, 64> blank;
+  blank.fill(0x00);
+  std::array<std::uint8_t, 64> filled;
+  filled.fill(0x03);
+
+  while (pad_left > 0) {
+    for (std::size_t b = 0; b < 7; ++b) {
+      std::copy(blank.begin(), blank.end(), std::back_inserter(padded_data));
+    }
+    --pad_left;
+  }
+
+  for (std::size_t i = 0; i < width; ++i) {
+    if (pad_top != 0) {
+      for (std::size_t b = 0; b < pad_top; ++b) {
+        std::copy(blank.begin(), blank.end(), std::back_inserter(padded_data));
+      }
+    }
+    std::size_t tile_offset = i * height;
+    for (std::size_t d = 0; d < height; ++d) {
+      std::size_t tile_index = (d + tile_offset);
+      std::size_t pixel_offset = tile_index * 64;
+
+      std::copy(
+        data.begin() + pixel_offset,
+        data.begin() + pixel_offset + 64,
+        std::back_inserter(padded_data)
+      );
+    }
+  }
+
+  while (pad_right > 0) {
+    for (std::size_t b = 0; b < 7; ++b) {
+      std::copy(blank.begin(), blank.end(), std::back_inserter(padded_data));
+    }
+    --pad_right;
+  }
+
+  width = 7;
+  height = 7;
+  data = padded_data;
+}
+
 void gbemu::Renderer::transpose() {
   std::vector<std::uint8_t> transposed_data;
   transposed_data.resize(data.size());
@@ -77,32 +126,30 @@ void gbemu::Renderer::transpose() {
   std::uint8_t num_tiles = width * height;
 
   for (std::size_t tile_index = 0; tile_index < num_tiles; ++tile_index) {
-    // get tile data from stream
-    std::vector<std::uint8_t> tile_data;
-    std::copy(
-      &data[tile_index * 64],
-      &data[(tile_index + 1) * 64],
-      std::back_inserter(tile_data)
-    );
+    // data for each tile (64 bytes) is stored sequntially
+    std::size_t tile_offset = tile_index * 64;
 
-    // put tile data into new array
-    // get tile position
-    std::size_t top = tile_index % height;
-    std::size_t left = tile_index / height;
-
-    // top left pixel of current tile.
+    // need to advance a whole image row for each row in the tile data
     std::size_t row_pixel_count = width * 8;
-    std::size_t offset = (top * 8) * row_pixel_count;
-    std::size_t index = (left * 8) + offset;
+
+    // convert tile_index into pixel x and y coords
+    std::size_t x = (tile_index / height) * 8;
+    std::size_t y = (tile_index % height) * 8;
+
+    // calculate offset of top-left pixel in tile data
+    std::size_t dst_offset = x + (y * row_pixel_count);
+    // std::cout << dst_offset << std::endl;
 
     for (std::size_t row = 0; row < 8; ++row) {
-      std::size_t src_offset = row * 8;
-      std::size_t dst_offset = row * row_pixel_count;
-      for (std::size_t col = 0; col < 8; ++col) {
-        std::size_t src_index = col + src_offset;
-        std::size_t dst_index = col + dst_offset;
+      std::size_t pixel_offset = row * 8;
 
-        transposed_data[index + dst_index] = tile_data[src_index];
+      // count of pixels in the number of full rows needed to advance
+      std::size_t row_offset = row * row_pixel_count;
+      for (std::size_t col = 0; col < 8; ++col) {
+        std::size_t src_index = tile_offset + pixel_offset + col;
+        std::size_t dst_index = dst_offset + row_offset + col;
+
+        transposed_data[dst_index] = data[src_index];
       }
     }
   }

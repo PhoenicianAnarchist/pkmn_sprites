@@ -27,13 +27,14 @@ namespace gbemu {
 
     void interlace();
     void expand();
+    void add_padding();
     void transpose();
 
     void save(
       const std::filesystem::path &directory, const std::string &name,
       IMAGE_FORMAT format, bool create_dirs
     );
-  // private:
+  private:
     std::vector<std::uint8_t> data;
     std::uint8_t width;
     std::uint8_t height;
