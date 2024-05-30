@@ -11,7 +11,9 @@ struct OPTIONS {
   std::filesystem::path output_path;
   std::uint8_t index;
   std::uint8_t dexno;
+  bool extract_all;
   bool create_dirs;
+  int verbose_level;
 };
 
 OPTIONS parse_command_line(int argc, char *argv[]);

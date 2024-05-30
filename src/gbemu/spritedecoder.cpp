@@ -1,11 +1,14 @@
 #include <iostream>
 #include <bitset>
 
+#include "helpers.hpp"
+
 #include "spritedecoder.hpp"
 
-gbemu::Decoder::Decoder(Cartridge &cart)
+gbemu::Decoder::Decoder(Cartridge &cart, int verbose_level)
 : cart(cart), rom_interface(cart.bank1), offset(0), bank(0), width(0),
-  height(0), encoding_mode(0), swap_buffers(false)
+  height(0), encoding_mode(0), swap_buffers(false), primary_buffer(1),
+  secondary_buffer(2), verbose_level(verbose_level)
 {}
 
 void gbemu::Decoder::set_bank(std::uint8_t value) {
@@ -23,6 +26,10 @@ void gbemu::Decoder::read_header() {
   width = rom_interface.get_nibble();
   height = rom_interface.get_nibble();
   swap_buffers = rom_interface.get();
+
+  if (swap_buffers) {
+    std::swap(primary_buffer, secondary_buffer);
+  }
 }
 
 void gbemu::Decoder::read_encoding_mode() {
@@ -34,7 +41,7 @@ void gbemu::Decoder::read_encoding_mode() {
 }
 
 void gbemu::Decoder::rle_decode(std::size_t plane_index) {
-  std::size_t pairs_to_read = width * height * 8 * 4;
+  int pairs_to_read = width * height * 8 * 4;
 
   // each column is only 2 pixels wide
   std::size_t current_column = 0;
@@ -46,13 +53,17 @@ void gbemu::Decoder::rle_decode(std::size_t plane_index) {
     buffer_offset = 1176 - buffer_offset;
   }
 
-  // std::cout << "Buffer offset for plane " << plane_index << " == " << buffer_offset << std::endl;
-
   std::size_t num_rows = (height * 8);
 
   bool packet_is_data = rom_interface.get();
   while (true) {
     std::vector<std::bitset<2>> pairs;
+    std::size_t bit = rom_interface.tell();
+
+    if (verbose_level >= 2) {
+      std::cout << (packet_is_data ? "DATA" : "RLE") << " packet  @ ";
+      std::cout << gbhelp::hex_str(bit / 8) << "(" << bit << ")" << std::endl;
+    }
     try {
       if (packet_is_data) {
         pairs = decode_data_packet();
@@ -61,10 +72,17 @@ void gbemu::Decoder::rle_decode(std::size_t plane_index) {
       }
     } catch (std::ios_base::failure &e) { break; }
 
-    // std::cout << "writing pairs" << std::endl;
+    if (pairs.size() == 0) {
+      // sometimes got zero pairs back, should not have hapenned.
+      if (verbose_level >= 1) {
+        std::cerr << "WARNING: Recieved zero pairs in packet. ";
+        std::cerr << pairs_to_read << " pairs left to read!" << std::endl;
+      }
+      // break;
+    }
+
     for (std::bitset<2> p : pairs) {
       std::size_t byte_index = buffer_offset + offset + current_row;
-      // std::cout << "writing to " << byte_index << std::endl;
 
       std::uint8_t new_byte = (p.to_ulong() & 0xff);
       new_byte <<= (3 - (current_column % 4)) * 2;
@@ -77,9 +95,7 @@ void gbemu::Decoder::rle_decode(std::size_t plane_index) {
       }
     }
 
-    // std::cout << "finished writing pairs" << std::endl;
     pairs_to_read -= pairs.size();
-    // std::cout << "pairs left " << pairs_to_read << std::endl;
 
     if (pairs_to_read <= 0) {
       break;
@@ -101,12 +117,18 @@ std::vector<std::bitset<2>> gbemu::Decoder::decode_rle_packet() {
 
     ++bits_read;
   } while (bit != 0);
+  if (verbose_level >= 3) {
+    std::cout << "  L == " << l << std::endl;
+  }
 
   std::bitset<RLE_PACKET_MAX_BITS> v = 0;
   for (std::size_t i = 0; i < bits_read; ++i) {
     bit = rom_interface.get();
     v <<= 1;
     v.set(0, bit);
+  }
+  if (verbose_level >= 3) {
+    std::cout << "  V == " << v << std::endl;
   }
 
   std::size_t num_pairs = l.to_ulong() + v.to_ulong() + 1;
@@ -115,6 +137,9 @@ std::vector<std::bitset<2>> gbemu::Decoder::decode_rle_packet() {
 
   for (std::size_t i = 0; i < num_pairs; ++i) {
     pairs.push_back({0b00});
+  }
+  if (verbose_level >= 3) {
+    std::cout << "  N == " << num_pairs << std::endl;
   }
 
   return pairs;
@@ -131,8 +156,14 @@ std::vector<std::bitset<2>> gbemu::Decoder::decode_data_packet() {
       break;
     }
 
+    if (verbose_level >= 3) {
+      std::cout << pair << " ";
+    }
     pairs.push_back(pair);
   };
+  if (verbose_level >= 3) {
+    std::cout << std::endl;
+  }
 
   return pairs;
 }

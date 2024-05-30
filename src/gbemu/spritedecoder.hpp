@@ -11,7 +11,7 @@ namespace gbemu {
 
   class Decoder {
   public:
-    Decoder(Cartridge &card);
+    Decoder(Cartridge &card, int verbose_level=0);
     void set_bank(std::uint8_t value);
     void set_offset(std::uint16_t value);
 
@@ -37,6 +37,11 @@ namespace gbemu {
     std::uint8_t height;
     std::uint8_t encoding_mode;
     bool swap_buffers;
+
+    std::uint8_t primary_buffer;
+    std::uint8_t secondary_buffer;
+
+    int verbose_level;
   };
 }
 
