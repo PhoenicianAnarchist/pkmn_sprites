@@ -1,29 +1,31 @@
 #include <bitset>
 
-#include "binaryreader.hpp"
+#include "binaryinterface.hpp"
 
-BinaryReader::BinaryReader(std::vector<std::uint8_t> &buffer)
-: buffer(buffer), pointer(0) {
-  bitcount = buffer.size() * 8;
+gbemu::BinaryInterface::BinaryInterface(
+  std::array<std::uint8_t, 0x4000> &buffer
+) : buffer(buffer), pointer(0) {}
+
+
+void gbemu::BinaryInterface::attach_buffer(
+  std::array<std::uint8_t, 0x4000> &new_buffer
+) {
+  buffer = new_buffer;
 }
 
-std::size_t BinaryReader::size() const {
-  return bitcount;
-}
-
-std::vector<std::uint8_t> &BinaryReader::data() const {
+std::array<std::uint8_t, 0x4000> &gbemu::BinaryInterface::data() const {
   return buffer;
 }
 
-void BinaryReader::seek(std::size_t p) {
+void gbemu::BinaryInterface::seek(std::size_t p) {
   pointer = p;
 }
 
-std::size_t BinaryReader::tell() const {
+std::size_t gbemu::BinaryInterface::tell() const {
   return pointer;
 }
 
-bool BinaryReader::peek() const {
+bool gbemu::BinaryInterface::peek() const {
   std::size_t byte_index = pointer / 8;
   std::size_t bit_index = 7 - (pointer % 8);
   std::uint8_t byte = buffer[byte_index];
@@ -33,7 +35,7 @@ bool BinaryReader::peek() const {
   return byte == 0b00000001;
 }
 
-bool BinaryReader::get() {
+bool gbemu::BinaryInterface::get() {
   bool b = peek();
 
   ++pointer;
@@ -41,7 +43,7 @@ bool BinaryReader::get() {
   return b;
 }
 
-void BinaryReader::put(bool b) {
+void gbemu::BinaryInterface::put(bool b) {
   std::size_t byte_index = pointer / 8;
   std::size_t bit_index = 7 - (pointer % 8);
   std::uint8_t byte = buffer[byte_index];
@@ -53,19 +55,19 @@ void BinaryReader::put(bool b) {
   ++pointer;
 }
 
-std::uint8_t BinaryReader::get_pair() {
+std::uint8_t gbemu::BinaryInterface::get_pair() {
   return get_bits(2);
 }
 
-std::uint8_t BinaryReader::get_nibble() {
+std::uint8_t gbemu::BinaryInterface::get_nibble() {
   return get_bits(4);
 }
 
-std::uint8_t BinaryReader::get_byte() {
+std::uint8_t gbemu::BinaryInterface::get_byte() {
   return get_bits(8);
 }
 
-std::uint8_t BinaryReader::get_bits(std::size_t n) {
+std::uint8_t gbemu::BinaryInterface::get_bits(std::size_t n) {
   std::uint8_t p = 0;
 
   for (std::size_t i = 0; i < n; ++i) {
