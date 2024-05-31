@@ -14,6 +14,7 @@
 #include "gbemu/spriterenderer.hpp"
 
 #include "util/options.hpp"
+#include "util/table.hpp"
 
 void test_ram(Cartridge &cart);
 
@@ -24,6 +25,8 @@ namespace rominfo = pkmnred;
 int extract_sprite(
   Cartridge& cart, std::uint8_t pokemon_id, int verbose_level=0
 );
+
+Tabulate tabulate;
 
 int main(int argc, char *argv[]) {
   OPTIONS options = parse_command_line(argc, argv);
@@ -49,6 +52,24 @@ int main(int argc, char *argv[]) {
   std::cout << "Successfully loaded " << rominfo::name_string << std::endl;
   std::cout << "------------------------------------------------" << std::endl;
 
+  tabulate.set_column_config(0, {12, 0, true,  false}); // PKMN NAME
+  tabulate.set_column_config(1, { 4, 0, false, false}); // ID
+  tabulate.set_column_config(2, { 5, 0, false, false}); // DEXNO
+  tabulate.set_column_config(3, { 4, 2, false, true }); // BANK
+  tabulate.set_column_config(4, { 6, 4, true,  true }); // ADDR
+  tabulate.set_column_config(5, { 4, 0, false, false}); // MODE
+  tabulate.set_column_config(6, { 5, 0, true,  false}); // SWAP?
+  tabulate.add_header({
+    "PKMN_NAME",
+    "ID",
+    "DEXNO",
+    "BANK",
+    "ADDR",
+    "MODE",
+    "SWAP?"
+  });
+  tabulate.add_hr();
+
   if (options.extract_all) {
     for (std::uint8_t i = 1; i <= 151; ++i) {
       // cart.ram.fill(0);
@@ -73,6 +94,8 @@ int main(int argc, char *argv[]) {
       return err;
     }
   }
+
+  std::cout << tabulate << std::endl;
 
   return 0;
 }
@@ -126,13 +149,9 @@ int extract_sprite(
   decoder.set_bank(rominfo::sprite_banks[pokemon_stats.id - 1]);
   decoder.set_offset(pokemon_stats.front_sprite_offset);
   decoder.read_header();
-  // std::cout << "width == " << int(decoder.width) << std::endl;
-  // std::cout << "height == " << int(decoder.height) << std::endl;
-  // std::cout << "swap_buffers == " << std::boolalpha << decoder.swap_buffers << std::endl;
-  decoder.rle_decode(1);
+  decoder.rle_decode(decoder.primary_buffer);
   decoder.read_encoding_mode();
-  // std::cout << "encoding_mode == " << int(decoder.encoding_mode) << std::endl;
-  decoder.rle_decode(2);
+  decoder.rle_decode(decoder.secondary_buffer);
   gbhelp::dump_ram(cart, "debug", "rle", true);
 
   decoder.delta_decode(decoder.primary_buffer);
@@ -152,6 +171,16 @@ int extract_sprite(
   decoder.copy(2, 1);
   decoder.zip_planes();
   gbhelp::dump_ram(cart, "debug", "final", true);
+
+  tabulate.add_row({
+    pokemon_stats.name,
+    Tabulate::int_str(pokemon_stats.id),
+    Tabulate::int_str(pokemon_stats.dexno),
+    Tabulate::hex_str(rominfo::sprite_banks[(pokemon_stats.id - 1)], 1),
+    Tabulate::hex_str(pokemon_stats.front_sprite_offset, 2),
+    Tabulate::int_str(decoder.encoding_mode),
+    Tabulate::bool_str(decoder.swap_buffers)
+  });
 
   /////////////////////////////////////////////////////////////////////////////
   // Convert tile data and export image

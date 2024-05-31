@@ -38,6 +38,11 @@ void gbemu::Decoder::read_encoding_mode() {
     encoding_mode <<= 1;
     encoding_mode |= rom_interface.get();
   }
+
+  // encoding mode 1 is represented by 0;
+  if (encoding_mode == 0) {
+    encoding_mode = 1;
+  }
 }
 
 void gbemu::Decoder::rle_decode(std::size_t plane_index) {
@@ -48,10 +53,6 @@ void gbemu::Decoder::rle_decode(std::size_t plane_index) {
   std::size_t current_row = 0;
   std::size_t offset = 0;
   std::size_t buffer_offset = plane_index * 392;
-
-  if (swap_buffers) {
-    buffer_offset = 1176 - buffer_offset;
-  }
 
   std::size_t num_rows = (height * 8);
 
@@ -201,12 +202,12 @@ void gbemu::Decoder::delta_decode(std::size_t plane_index) {
 }
 
 void gbemu::Decoder::xor_planes() {
-  std::size_t buffer_1_offset = 392;
-  std::size_t buffer_2_offset = 784;
+  std::size_t buffer_1_offset = primary_buffer * 392;
+  std::size_t buffer_2_offset = secondary_buffer * 392;
 
   std::size_t buffer_size = width * height * 8;
   for (std::size_t i = 0; i < buffer_size; ++i) {
-    cart.ram[buffer_1_offset + i] ^= cart.ram[buffer_2_offset + i];
+    cart.ram[buffer_2_offset + i] ^= cart.ram[buffer_1_offset + i];
   }
 }
 
