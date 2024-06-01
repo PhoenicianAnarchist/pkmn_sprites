@@ -13,6 +13,7 @@
 #include "gbemu/spritedecoder.hpp"
 #include "gbemu/spriterenderer.hpp"
 
+#include "util/io.hpp"
 #include "util/options.hpp"
 #include "util/table.hpp"
 
@@ -24,6 +25,12 @@ namespace rominfo = pkmnred;
 
 int extract_sprite(
   Cartridge& cart, std::uint8_t pokemon_id, int verbose_level=0
+);
+
+void dump_plane(
+  const Cartridge& cart, const gbemu::Decoder& decoder,
+  const rominfo::PokemonStats& pokemon_stats, const std::string& name,
+  std::size_t plane
 );
 
 Tabulate tabulate;
@@ -125,7 +132,7 @@ int extract_sprite(
   rominfo::PokemonStats pokemon_stats;
   try {
     pokemon_stats = rominfo::get_stats(pokemon_id, cart);
-  } catch (std::out_of_range e) {
+  } catch (std::out_of_range& e) {
     std::cout << e.what() << std::endl;
     return 1;
   }
@@ -154,11 +161,17 @@ int extract_sprite(
   decoder.rle_decode(decoder.secondary_buffer);
   gbhelp::dump_ram(cart, "debug", "rle", true);
 
+  dump_plane(cart, decoder, pokemon_stats, "rle", 1);
+  dump_plane(cart, decoder, pokemon_stats, "rle", 2);
+
   decoder.delta_decode(decoder.primary_buffer);
   if (decoder.encoding_mode != 2) {
     decoder.delta_decode(decoder.secondary_buffer);
   }
   gbhelp::dump_ram(cart, "debug", "delta", true);
+
+  dump_plane(cart, decoder, pokemon_stats, "delta", 1);
+  dump_plane(cart, decoder, pokemon_stats, "delta", 2);
 
   if (decoder.encoding_mode != 1) {
     decoder.xor_planes();
@@ -203,4 +216,32 @@ int extract_sprite(
   renderer.save("output", ss.str(), gbemu::IMAGE_FORMAT::PGM, true);
 
   return 0;
+}
+
+void dump_plane(
+  const Cartridge& cart, const gbemu::Decoder& decoder,
+  const rominfo::PokemonStats& pokemon_stats, const std::string& name,
+  std::size_t plane
+) {
+  /////////////////////////////////////////////////////////////////////////////
+  // Convert tile data and export image
+  std::vector<std::uint8_t> sprite_data;
+
+  std::size_t offset = plane * 392;
+
+  for (std::size_t i = 0; i < 392; ++i) {
+    sprite_data.push_back(cart.ram[offset + i]);
+    sprite_data.push_back(cart.ram[offset + i]);
+  }
+
+  gbemu::Renderer renderer(sprite_data, decoder.width, decoder.height);
+  renderer.interlace();
+  renderer.expand();
+  renderer.add_padding();
+  renderer.transpose();
+
+  std::stringstream ss;
+  ss << std::setw(3) << std::setfill('0') << int(pokemon_stats.dexno) << ".";
+  ss << pokemon_stats.name << "_" << name << "_plane_" << plane;
+  renderer.save("debug", ss.str(), gbemu::IMAGE_FORMAT::PGM, true);
 }

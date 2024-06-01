@@ -7,7 +7,7 @@ TESTOBJECTS=$(patsubst tests/%,build/tests/%,${TESTSOURCES:.cpp=.o})
 TESTDIRS=$(dir ${TESTOBJECTS})
 TESTS=out/tests/binaryreader
 
-CXX_FLAGS=
+CXX_FLAGS=-Wall -Wextra -Werror
 LD_FLAGS=
 
 NAME=pkmn_sprite
